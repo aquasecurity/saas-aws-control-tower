@@ -1,0 +1,406 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Aqua CSPM security scanner cross-account role
+Parameters:
+  AquaCSPMApiKey:
+    Description: 'Aqua CSPM API key: Account Management > API Keys > Generate Key'
+    Type: String
+    NoEcho: True
+  AquaCSPMSecretKey:
+    Description: 'Aqua CSPM Secret'
+    Type: String
+    NoEcho: True
+  AquaGroupName:
+    Description: 'Aqua CSPM Group Name from the Aqua Wave console'
+    Type: String
+    Default: Default
+
+Mappings:
+  Constants:
+    SecretManager:
+      SecretName: "/aquacspm/secret_cspm"
+
+Resources:
+  AquaCSPMSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: "Secret that contains Dynatrace API URL and token"
+      Name: !FindInMap ["Constants", "SecretManager", "SecretName"]
+      SecretString: !Sub '{"aquacspm_api_key":"${AquaCSPMApiKey}", "aquacspm_secret":"${AquaCSPMSecretKey}"}'
+      KmsKeyId: !GetAtt AquaCSPMControlTowerKMSKey.Arn
+
+  AquaCSPMSecretResourcePolicy:
+    Type: AWS::SecretsManager::ResourcePolicy
+    Properties:
+      SecretId: !Ref AquaCSPMSecret
+      ResourcePolicy:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !GetAtt LambdaRole.Arn
+            Action: 'secretsmanager:GetSecretValue'
+            "Resource": !Ref AquaCSPMSecret
+
+  AquaCSPMControlTowerKMSKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: "This is KMS Key Id used to encrypt/decrypt the Secret"
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: '2012-10-17'
+        Id: key-default-1
+        Statement:
+          - Sid: Allow administration of the key
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action:
+              - kms:Create*
+              - kms:Describe*
+              - kms:Enable*
+              - kms:List*
+              - kms:Put*
+              - kms:Update*
+              - kms:Revoke*
+              - kms:Disable*
+              - kms:Get*
+              - kms:Delete*
+              - kms:ScheduleKeyDeletion
+              - kms:CancelKeyDeletion
+            Resource: '*'
+          - Sid: Allow use of the key
+            Effect: Allow
+            Principal:
+              AWS: !Sub ${AWS::AccountId}
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt
+              - kms:GenerateDataKey
+              - kms:CreateGrant
+              - kms:DescribeKey
+            Resource: '*'
+            Condition:
+              StringEquals:
+                kms:ViaService: !Sub secretsmanager.${AWS::Region}.amazonaws.com
+                kms:CallerAccount: !Sub ${AWS::AccountId}
+
+  AquaCSPMControlTowerKMSAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub "alias/AquaCSPM-Control-Tower-${AWS::StackName}"
+      TargetKeyId:
+        Ref: AquaCSPMControlTowerKMSKey
+
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+            Condition: {}
+      Path: /
+      Policies:
+        - PolicyName: inline-policy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'secretsmanager:GetSecretValue'
+                Resource: !Ref AquaCSPMSecret
+              - Effect: Allow
+                Action:
+                  - kms:Decrypt
+                Resource: !GetAtt AquaCSPMControlTowerKMSKey.Arn
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  ExternalIDPrimerInvoke:
+    Type: AWS::CloudFormation::CustomResource
+    Version: "1.0"
+    Properties:
+      ServiceToken: !GetAtt ExternalIDPrimer.Arn
+      Secret: !FindInMap ["Constants", "SecretManager", "SecretName"]
+
+  ExternalIDPrimer:
+    DependsOn:
+      - LambdaRole
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Retrieves the External ID from Aqua CSPM
+      Timeout: 30
+      Code:
+        ZipFile: |
+          import json
+          import boto3
+          import logging
+          import os
+          import urllib3.request
+          import hashlib
+          import time
+          import hmac
+          import base64
+          import cfnresponse
+
+          LOGGER = logging.getLogger()
+          LOGGER.setLevel(logging.INFO)
+          session = boto3.session.Session()
+          sm_client = session.client('secretsmanager')
+
+          def lambda_handler(event, context):
+            LOGGER.info('ExternalID generation Lambda started :{}'.format(event))
+            secret = event['ResourceProperties']['Secret']
+            responseData = {}
+            try:
+              aqua_api_config = get_aquacspm_api_config(secret)
+              aquacspm_url = 'https://api.cloudsploit.com'
+              aquacspm_api_key = aqua_api_config['aquacspm_api_key']
+              aquacspm_secret = aqua_api_config['aquacspm_secret']
+              external_id = get_aquacspm_external_id(aquacspm_url, aquacspm_api_key, aquacspm_secret)
+              LOGGER.info(f'Successfully generated the External ID {external_id} with Aqua CSPM')
+              responseData['ExternalId'] = external_id
+              return cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData, "CustomResourcePhysicalID")
+            except Exception as e:
+              LOGGER.error(e)
+              return cfnresponse.send(event, context, cfnresponse.FAILED, responseData, "CustomResourcePhysicalID")
+
+          def get_aquacspm_api_config(secret):
+            get_secret_value_response = sm_client.get_secret_value(SecretId=secret)
+            resp_str = get_secret_value_response['SecretString']
+            return json.loads(resp_str)
+
+          def get_aquacspm_external_id(aquacspm_url, aquacspm_api_key, aquacspm_secret):
+            path = "/v2/generatedids"
+            method = "POST"
+            timestamp = str(int(time.time() * 1000))
+            string = timestamp + method + path
+            string_bytes= bytes(string , 'utf-8')
+            secret_bytes = bytes(aquacspm_secret, 'utf-8')
+            signature = hmac.new(secret_bytes, string_bytes, hashlib.sha256).hexdigest()
+            hdr = {
+              "Accept": "application/json",
+              "X-API-Key": aquacspm_api_key,
+              "X-Signature": signature,
+              "X-Timestamp": timestamp,
+              "content-type": "application/json"
+            }
+            http = urllib3.PoolManager()
+            req = http.request('POST', aquacspm_url + path, headers=hdr)
+            LOGGER.info(f'Completed POST')
+            response = json.loads(req.data.decode('utf-8'))
+            return response['data'][0]['generated_id']
+
+      Handler: index.lambda_handler
+      MemorySize: 128
+      Role: !GetAtt "LambdaRole.Arn"
+      Runtime: python3.7
+
+  AquaCSPMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            AWS: arn:aws:iam::057012691312:role/lambda-cloudsploit-api
+          Action: 'sts:AssumeRole'
+          Condition:
+            StringEquals:
+              sts:ExternalId: !GetAtt ExternalIDPrimerInvoke.ExternalId
+            IpAddress:
+              aws:SourceIp: 3.231.74.65/32
+        - Effect: Allow
+          Principal:
+            AWS: arn:aws:iam::057012691312:role/lambda-cloudsploit-collector
+          Action: 'sts:AssumeRole'
+          Condition:
+            StringEquals:
+              sts:ExternalId: !GetAtt ExternalIDPrimerInvoke.ExternalId
+            IpAddress:
+              aws:SourceIp: 3.231.74.65/32
+        - Effect: Allow
+          Principal:
+            AWS: arn:aws:iam::057012691312:role/lambda-cloudsploit-remediator
+          Action: 'sts:AssumeRole'
+          Condition:
+            StringEquals:
+              sts:ExternalId: !GetAtt ExternalIDPrimerInvoke.ExternalId
+            IpAddress:
+              aws:SourceIp: 3.231.74.65/32
+        - Effect: Allow
+          Principal:
+            AWS: arn:aws:iam::057012691312:role/lambda-cloudsploit-tasks
+          Action: 'sts:AssumeRole'
+          Condition:
+            StringEquals:
+              sts:ExternalId: !GetAtt ExternalIDPrimerInvoke.ExternalId
+            IpAddress:
+              aws:SourceIp: 3.231.74.65/32
+      Policies:
+      - PolicyName: aqua-cspm-supplemental-policy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - ses:DescribeActiveReceiptRuleSet
+            - athena:GetWorkGroup
+            - logs:DescribeLogGroups
+            - logs:DescribeMetricFilters
+            - elastictranscoder:ListPipelines
+            - elasticfilesystem:DescribeFileSystems
+            - servicequotas:ListServiceQuotas
+            Resource: "*"
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/SecurityAudit
+
+  OnboardingPrimerInvoke:
+    Type: AWS::CloudFormation::CustomResource
+    Version: "1.0"
+    Properties:
+      ServiceToken: !GetAtt OnboardingPrimer.Arn
+      Secret: !FindInMap ["Constants", "SecretManager", "SecretName"]
+      GroupName: !Ref AquaGroupName
+      RoleArn: !GetAtt AquaCSPMRole.Arn
+      Externalid: !GetAtt ExternalIDPrimerInvoke.ExternalId
+      Accountid: !Ref "AWS::AccountId"
+
+
+  OnboardingPrimer:
+    DependsOn:
+      - LambdaRole
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Onboards the account to Aqua CSPM
+      Timeout: 30
+      Code:
+        ZipFile: |
+          import json
+          import boto3
+          import logging
+          import os
+          import urllib3
+          import hashlib
+          import time
+          import hmac
+          import base64
+          import cfnresponse
+
+          LOGGER = logging.getLogger()
+          LOGGER.setLevel(logging.INFO)
+          session = boto3.session.Session()
+          sm_client = session.client('secretsmanager')
+
+          def lambda_handler(event, context):
+            LOGGER.info('Onboarding of account started :{}'.format(event))
+            secret = event['ResourceProperties']['Secret']
+            group_name = event['ResourceProperties']['GroupName']
+            external_id = event['ResourceProperties']['Externalid']
+            role_arn = event['ResourceProperties']['RoleArn']
+            acc_name = event['ResourceProperties']['Accountid']
+            responseData = {}
+            try:
+              aqua_api_config = get_aquacspm_api_config(secret)
+              aquacspm_url = 'https://api.cloudsploit.com'
+              aquacspm_api_key = aqua_api_config['aquacspm_api_key']
+              aquacspm_secret = aqua_api_config['aquacspm_secret']
+              group_id = get_group_id(aquacspm_url, aquacspm_api_key, aquacspm_secret, group_name)
+              register_account(aquacspm_url, aquacspm_api_key, aquacspm_secret, acc_name, role_arn, external_id, group_id)
+              LOGGER.info(f'Successfully registered the account {acc_name} with Aqua CSPM')
+              return cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData, "CustomResourcePhysicalID")
+            except Exception as e:
+              LOGGER.error(e)
+              return cfnresponse.send(event, context, cfnresponse.FAILED, responseData, "CustomResourcePhysicalID")
+
+          def get_aquacspm_api_config(secret):
+            get_secret_value_response = sm_client.get_secret_value(SecretId=secret)
+            resp_str = get_secret_value_response['SecretString']
+            return json.loads(resp_str)
+
+          def get_group_id(aquacspm_url, aquacspm_api_key, aquacspm_secret, group_name):
+            path = "/v2/groups"
+            method = "GET"
+            timestamp = str(int(time.time() * 1000))
+
+            string = timestamp + method + path
+            string_bytes= bytes(string , 'utf-8')
+            secret_bytes = bytes(aquacspm_secret, 'utf-8')
+
+            signature = hmac.new(secret_bytes, string_bytes, hashlib.sha256).hexdigest()
+
+            hdr = {
+              "Accept": "application/json",
+              "X-API-Key": aquacspm_api_key,
+              "X-Signature": signature,
+              "X-Timestamp": timestamp,
+              "content-type": "application/json"
+            }
+
+            http = urllib3.PoolManager()
+            request = http.request('GET', aquacspm_url + path, headers=hdr)
+            LOGGER.info(f'Completed GET')
+            response = json.loads(request.data.decode('utf-8'))
+            groups = response['data']
+            group_dict = dict()
+            for item in groups:
+              group_dict['name'] = item['name']
+              group_dict['id'] = item['id']
+              if item['name'] == group_name:
+                group_id = item['id']
+
+            LOGGER.info(f'Aqua CSPM get Group ID response: {group_id}')
+            return group_id
+
+          def register_account(aquacspm_url, aquacspm_api_key, aquacspm_secret, acc_name, cspm_role_arn, external_id, group_id):
+            path = "/v2/keys"
+            method = "POST"
+            timestamp = str(int(time.time() * 1000))
+
+            body = {
+              "name": acc_name,
+              "cloud": "aws",
+              "role_arn": cspm_role_arn,
+              "external_id": external_id,
+              "group_id": group_id
+            }
+            body_str = json.dumps(body, separators=(',', ':'))
+
+            string = timestamp + method + path + body_str
+            string_bytes= bytes(string , 'utf-8')
+            secret_bytes = bytes(aquacspm_secret, 'utf-8')
+
+            signature = hmac.new(secret_bytes, string_bytes, hashlib.sha256).hexdigest()
+
+            hdr = {
+              "Accept": "application/json",
+              "X-API-Key": aquacspm_api_key,
+              "X-Signature": signature,
+              "X-Timestamp": timestamp,
+              "content-type": "application/json"
+            }
+
+            http = urllib3.PoolManager()
+            request = http.request('POST', aquacspm_url + path, headers=hdr, body=body_str)
+            LOGGER.info(f'Completed POST')
+            resp_str = request.data
+
+            LOGGER.info(f'Aqua CSPM API add response: {resp_str}')
+
+      Handler: index.lambda_handler
+      MemorySize: 128
+      Role: !GetAtt "LambdaRole.Arn"
+      Runtime: python3.7
+
+Outputs:
+  AquaCSPMeArn:
+    Description: The role ARN of the cross-account user. Copy this into Aqua Cloud.
+    Value: !GetAtt AquaCSPMRole.Arn
+  StackVersion:
+    Description: The Aqua CSPM stack version.
+    Value: '2.0'
