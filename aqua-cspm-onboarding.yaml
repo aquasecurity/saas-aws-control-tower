@@ -180,15 +180,15 @@ Resources:
               group = rp['Group']
               role_arn = rp['RoleArn']
               acc = rp['AccId']
-              resData = {}
+              onbData = {}
               try:
                 g_id = get_gid(aqua_url, aqua_api_key, aqua_secret, group)
                 register(aqua_url, aqua_api_key, aqua_secret, acc, role_arn, extid, g_id)
                 LOGGER.info(f'Account registered {acc}')
-                return cfr.send(event, ctxt, cfr.SUCCESS, resData, "Onboarding")
+                return cfr.send(event, ctxt, cfr.SUCCESS, onbData, "Onboarding")
               except Exception as e:
                 LOGGER.error(e)
-                return cfr.send(event, ctxt, cfr.FAILED, resData, "Onboarding")
+                return cfr.send(event, ctxt, cfr.FAILED, onbData, "Onboarding")
 
           def get_conf(secret):
             val = sm_client.get_secret_value(SecretId=secret)
@@ -247,10 +247,11 @@ Resources:
               "name": acc,
               "cloud": "aws",
               "role_arn": role,
-              "ext_id": ext_id,
+              "external_id": ext_id,
               "group_id": gid
             }
             body_str = json.dumps(body, separators=(',', ':'))
+            LOGGER.info(body_str)
             enc = tstmp + method + path + body_str
             enc_b = bytes(enc, 'utf-8')
             secret = bytes(aqua_secret, 'utf-8')
