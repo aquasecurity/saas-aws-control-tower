@@ -1,6 +1,6 @@
 ---
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Aqua CSPM security scanner cross-account role
+Description: Aqua CSPM security scanner cross-account role. (MPCT-gjioizhf)
 Parameters:
   AquaCSPMApiKey:
     Description: 'Aqua CSPM API key: Account Management > API Keys > Generate Key'
