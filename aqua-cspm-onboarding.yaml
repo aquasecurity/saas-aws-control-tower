@@ -24,7 +24,7 @@ Resources:
   AquaCSPMSecret:
     Type: AWS::SecretsManager::Secret
     Properties:
-      Description: "Secret that contains Dynatrace API URL and token"
+      Description: "Secret that contains Aqua CSPM API URL and token"
       Name: !FindInMap ["Constants", "SecretManager", "SecretName"]
       SecretString: !Sub '{"aqua_api_key":"${AquaCSPMApiKey}", "aqua_secret":"${AquaCSPMSecretKey}"}'
       KmsKeyId: !GetAtt AquaCSPMControlTowerKMSKey.Arn
