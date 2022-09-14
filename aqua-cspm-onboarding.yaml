@@ -324,9 +324,77 @@ Resources:
             - athena:GetWorkGroup
             - logs:DescribeLogGroups
             - logs:DescribeMetricFilters
+            - config:getComplianceDetailsByConfigRule
             - elastictranscoder:ListPipelines
             - elasticfilesystem:DescribeFileSystems
             - servicequotas:ListServiceQuotas
+            - ssm:ListAssociations
+            - dlm:GetLifecyclePolicies
+            - airflow:ListEnvironments
+            - glue:GetSecurityConfigurations
+            - devops-guru:ListNotificationChannels
+            - ec2:GetEbsEncryptionByDefault
+            - ec2:GetEbsDefaultKmsKeyId
+            - organizations:ListAccounts
+            - kendra:ListIndices
+            - proton:ListEnvironmentTemplates
+            - qldb:ListLedgers
+            - airflow:ListEnvironments
+            - profile:ListDomains
+            - timestream:DescribeEndpoints
+            - timestream:ListDatabases
+            - frauddetector:GetDetectors
+            - memorydb:DescribeClusters
+            - kafka:ListClusters
+            - apprunner:ListServices
+            - finspace:ListEnvironments
+            - healthlake:ListFHIRDatastores
+            - codeartifact:ListDomains
+            - auditmanager:GetSettings
+            - appflow:ListFlows
+            - databrew:ListJobs
+            - managedblockchain:ListNetworks
+            - connect:ListInstances
+            - backup:ListBackupVaults
+            - backup:DescribeRegionSettings
+            - backup:getBackupVaultNotifications
+            - backup:ListBackupPlans
+            - backup:GetBackupVaultAccessPolicy
+            - dlm:GetLifecyclePolicies
+            - glue:GetSecurityConfigurations
+            - ssm:describeSessions
+            - ssm:GetServiceSetting
+            - ecr:DescribeRegistry
+            - ecr-public:DescribeRegistries
+            - kinesisvideo:ListStreams
+            - wisdom:ListAssistants
+            - voiceid:ListDomains
+            - lookoutequipment:ListDatasets
+            - iotsitewise:DescribeDefaultEncryptionConfiguration
+            - geo:ListTrackers
+            - geo:ListGeofenceCollections
+            - lookoutvision:ListProjects
+            - lookoutmetrics:ListAnomalyDetectors
+            - lex:ListBots
+            - forecast:ListDatasets
+            - forecast:ListForecastExportJobs
+            - forecast:DescribeDataset
+            - lambda:GetFunctionUrlConfig
+            - cloudwatch:GetMetricStatistics
+            - backup:GetBackupVaultAccessPolicy
+            - geo:DescribeTracker
+            - connect:ListInstanceStorageConfigs
+            - lex:ListBotAliases
+            - lookoutvision:ListModels
+            - geo:DescribeGeofenceCollection
+            - codebuild:BatchGetProjects
+            - profile:GetDomain
+            - lex:DescribeBotAlias
+            - lookoutvision:DescribeModel
+            - s3:ListBucket
+            - frauddetector:GetKMSEncryptionKey
+            - imagebuilder:ListImagePipelines
+            - compute-optimizer:GetRecommendationSummaries
             Resource: "*"
       ManagedPolicyArns:
       - arn:aws:iam::aws:policy/SecurityAudit
