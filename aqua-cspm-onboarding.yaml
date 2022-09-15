@@ -320,6 +320,12 @@ Resources:
           Statement:
           - Effect: Allow
             Action:
+            - compute-optimizer:GetEC2InstanceRecommendations
+            - compute-optimizer:GetAutoScalingGroupRecommendations
+            - imagebuilder:ListInfrastructureConfigurations
+            - imagebuilder:ListImageRecipes
+            - imagebuilder:ListContainerRecipes
+            - imagebuilder:ListComponents
             - ses:DescribeActiveReceiptRuleSet
             - athena:GetWorkGroup
             - logs:DescribeLogGroups
