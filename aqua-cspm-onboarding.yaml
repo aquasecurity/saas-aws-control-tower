@@ -320,8 +320,24 @@ Resources:
           Statement:
           - Effect: Allow
             Action:
+            - KMS:ListKeys
+            - KMS:DescribeKey
+            - KMS:ListAliases
+            - ConfigService:describeDeliveryChannels
+            - AppConfig:listApplications
+            - AppConfig:listConfigurationProfiles
+            - CloudFront:listDistributions
+            - IAM:ListRoles
+            - IAM:ListAttachedRolePolicies
+            - IAM:ListRolePolicies
+            - IAM:ListPolicies
+            - IAM:GetPolicy
+            - IAM:GetPolicyVersion
+            - IAM:GetRolePolicy
+            - lambda:ListFunctions
             - compute-optimizer:GetEC2InstanceRecommendations
             - compute-optimizer:GetAutoScalingGroupRecommendations
+            - cloudTrail:DescribeTrails
             - imagebuilder:ListInfrastructureConfigurations
             - imagebuilder:ListImageRecipes
             - imagebuilder:ListContainerRecipes
@@ -341,6 +357,9 @@ Resources:
             - devops-guru:ListNotificationChannels
             - ec2:GetEbsEncryptionByDefault
             - ec2:GetEbsDefaultKmsKeyId
+            - ec2:DescribeSubnets
+            - ec2:DescribeVolumes
+            - ec2:describeVpcPeeringConnections
             - organizations:ListAccounts
             - kendra:ListIndices
             - proton:ListEnvironmentTemplates
@@ -362,6 +381,7 @@ Resources:
             - managedblockchain:ListNetworks
             - connect:ListInstances
             - backup:ListBackupVaults
+            - backup:GetBackupPlan
             - backup:DescribeRegionSettings
             - backup:getBackupVaultNotifications
             - backup:ListBackupPlans
@@ -387,7 +407,6 @@ Resources:
             - forecast:DescribeDataset
             - lambda:GetFunctionUrlConfig
             - cloudwatch:GetMetricStatistics
-            - backup:GetBackupVaultAccessPolicy
             - geo:DescribeTracker
             - connect:ListInstanceStorageConfigs
             - lex:ListBotAliases
@@ -397,7 +416,22 @@ Resources:
             - profile:GetDomain
             - lex:DescribeBotAlias
             - lookoutvision:DescribeModel
-            - s3:ListBucket
+            - s3:ListBuckets
+            - S3:GetBucketVersioning
+            - S3:GetBucketLocation
+            - S3:GetBucketLifecycleConfiguration
+            - S3:GetBucketAccelerateConfiguration
+            - S3:GetObjectLockConfigurationa
+            - S3:GetPublicAccessBlock
+            - S3:GetBucketLocation
+            - S3:GetBucketLogging
+            - S3:GetBucketAcl
+            - S3:GetBucketEncryption
+            - S3:GetBucketPolicy
+            - S3:GetBucketWebsite
+            - S3:HeadBucket
+            - S3Control:GetPublicAccessBlock
+            - STS:GetCallerIdentity
             - frauddetector:GetKMSEncryptionKey
             - imagebuilder:ListImagePipelines
             - compute-optimizer:GetRecommendationSummaries
