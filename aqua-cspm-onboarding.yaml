@@ -323,7 +323,9 @@ Resources:
             - KMS:ListKeys
             - KMS:DescribeKey
             - KMS:ListAliases
-            - ConfigService:describeDeliveryChannels
+            - ElasticBeanstalk:DescribeEnvironments
+            - ElasticBeanstalk:DescribeConfigurationSettings
+            - ConfigService:DescribeDeliveryChannels
             - AppConfig:listApplications
             - AppConfig:listConfigurationProfiles
             - CloudFront:listDistributions
