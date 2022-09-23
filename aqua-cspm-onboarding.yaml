@@ -320,30 +320,11 @@ Resources:
           Statement:
           - Effect: Allow
             Action:
-            - KMS:ListKeys
-            - KMS:DescribeKey
-            - KMS:ListAliases
-            - ElasticBeanstalk:DescribeEnvironments
-            - ElasticBeanstalk:DescribeConfigurationSettings
-            - ConfigService:DescribeDeliveryChannels
-            - AppConfig:listApplications
-            - AppConfig:listConfigurationProfiles
-            - CloudFront:listDistributions
-            - IAM:ListRoles
-            - IAM:ListAttachedRolePolicies
-            - IAM:ListRolePolicies
-            - IAM:ListPolicies
-            - IAM:GetPolicy
-            - IAM:GetPolicyVersion
-            - IAM:GetRolePolicy
-            - lambda:ListFunctions
+            - appconfig:ListApplications
+            - appconfig:ListConfigurationProfiles
             - compute-optimizer:GetEC2InstanceRecommendations
             - compute-optimizer:GetAutoScalingGroupRecommendations
-            - cloudTrail:DescribeTrails
-            - imagebuilder:ListInfrastructureConfigurations
-            - imagebuilder:ListImageRecipes
-            - imagebuilder:ListContainerRecipes
-            - imagebuilder:ListComponents
+            - imagebuilder:List*
             - ses:DescribeActiveReceiptRuleSet
             - athena:GetWorkGroup
             - logs:DescribeLogGroups
@@ -419,21 +400,9 @@ Resources:
             - lex:DescribeBotAlias
             - lookoutvision:DescribeModel
             - s3:ListBuckets
-            - S3:GetBucketVersioning
-            - S3:GetBucketLocation
-            - S3:GetBucketLifecycleConfiguration
-            - S3:GetBucketAccelerateConfiguration
-            - S3:GetObjectLockConfigurationa
-            - S3:GetPublicAccessBlock
-            - S3:GetBucketLocation
-            - S3:GetBucketLogging
-            - S3:GetBucketAcl
-            - S3:GetBucketEncryption
-            - S3:GetBucketPolicy
-            - S3:GetBucketWebsite
-            - S3:HeadBucket
-            - S3Control:GetPublicAccessBlock
-            - STS:GetCallerIdentity
+            - s3:GetObjectLockConfiguration
+            - s3:GetAccountPublicAccessBlock
+            - sts:GetCallerIdentity
             - frauddetector:GetKMSEncryptionKey
             - imagebuilder:ListImagePipelines
             - compute-optimizer:GetRecommendationSummaries
