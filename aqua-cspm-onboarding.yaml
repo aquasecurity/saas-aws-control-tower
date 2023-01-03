@@ -320,17 +320,16 @@ Resources:
           Statement:
           - Effect: Allow
             Action:
+            - appconfig:ListApplications
+            - appconfig:ListConfigurationProfiles
             - compute-optimizer:GetEC2InstanceRecommendations
             - compute-optimizer:GetAutoScalingGroupRecommendations
             - imagebuilder:ListInfrastructureConfigurations
             - imagebuilder:ListImageRecipes
-            - imagebuilder:ListContainerRecipes
             - imagebuilder:ListComponents
-            - ses:DescribeActiveReceiptRuleSet
-            - athena:GetWorkGroup
-            - logs:DescribeLogGroups
-            - logs:DescribeMetricFilters
-            - config:getComplianceDetailsByConfigRule
+            - imagebuilder:GetInfrastructureConfiguration
+            - imagebuilder:GetImageRecipe
+            - imagebuilder:GetComponent
             - elastictranscoder:ListPipelines
             - elasticfilesystem:DescribeFileSystems
             - servicequotas:ListServiceQuotas
@@ -341,7 +340,6 @@ Resources:
             - devops-guru:ListNotificationChannels
             - ec2:GetEbsEncryptionByDefault
             - ec2:GetEbsDefaultKmsKeyId
-            - organizations:ListAccounts
             - kendra:ListIndices
             - proton:ListEnvironmentTemplates
             - qldb:ListLedgers
@@ -362,6 +360,7 @@ Resources:
             - managedblockchain:ListNetworks
             - connect:ListInstances
             - backup:ListBackupVaults
+            - backup:GetBackupPlan
             - backup:DescribeRegionSettings
             - backup:getBackupVaultNotifications
             - backup:ListBackupPlans
@@ -387,7 +386,6 @@ Resources:
             - forecast:DescribeDataset
             - lambda:GetFunctionUrlConfig
             - cloudwatch:GetMetricStatistics
-            - backup:GetBackupVaultAccessPolicy
             - geo:DescribeTracker
             - connect:ListInstanceStorageConfigs
             - lex:ListBotAliases
@@ -398,8 +396,9 @@ Resources:
             - lex:DescribeBotAlias
             - lookoutvision:DescribeModel
             - s3:ListBucket
+            - s3:GetObjectAttributes
+            - sts:GetCallerIdentity
             - frauddetector:GetKMSEncryptionKey
-            - imagebuilder:ListImagePipelines
             - compute-optimizer:GetRecommendationSummaries
             Resource: "*"
       ManagedPolicyArns:

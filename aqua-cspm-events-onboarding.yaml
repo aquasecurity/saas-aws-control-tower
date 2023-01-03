@@ -1,0 +1,387 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Aqua CSPM security scans CloudWatch Event rules, push to all accounts through AWS organizations. Must contact support to "the POST endpoint" for this script to work. Also best practice is to generate a unique API key and delete it after this script has been completed, in its current form it leaves the api key and secret unencrypted in the cloudwatch logs.
+Parameters:
+  URLBase:
+    Type: String
+    Description: >-
+      The base URL for the Aqua CSPM Events API. DO NOT change unless asked by
+      Aqua support.
+    Default: 'https://events.cloudsploit.com/events/dkjs9402laowih4594881a02jd/'
+  AquaCSPMApiKey:
+    Description: 'Aqua CSPM API key: Account Management > API Keys > Generate Key'
+    NoEcho: true
+    Type: String
+  AquaCSPMSecretKey:
+    Description: Aqua CSPM Secret
+    NoEcho: true
+    Type: String
+Resources:
+  ExternalURLInvoke:
+    Properties:
+      ServiceToken: !GetAtt ExternalURLPrimer.Arn
+      api_key: !Ref AquaCSPMApiKey
+      api_secret: !Ref AquaCSPMSecretKey
+      AWSAccount: !Ref 'AWS::AccountId'
+    Type: 'AWS::CloudFormation::CustomResource'
+    Version: '1.0'
+        
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+            Condition: {}
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  ExternalURLPrimer:
+    DependsOn:
+      - LambdaRole
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Retrieves the External ID from Aqua CSPM
+      Timeout: 30
+      Code:
+        ZipFile: |
+            from urllib.request import Request, urlopen
+            from urllib.parse import urlparse
+            import json
+            import ssl
+            import hmac
+            import hashlib
+            import time
+            import logging
+            import os
+            import requests
+            import boto3
+            from botocore.exceptions import ClientError
+            import base64
+            import cfnresponse 
+
+            LOGGER = logging.getLogger()
+            LOGGER.setLevel(logging.INFO)
+
+
+            sess = boto3.session.Session()
+            sm_client = sess.client('secretsmanager')
+
+            ## Prod URL ##
+            API_URL = "https://api.cloudsploit.com/v2"
+
+
+            def lambda_handler(event, context):
+              LOGGER.info('Lambda started :{}'.format(event))
+
+              #AWSAccount = context.invoked_function_arn.split(":")[4]
+              rp = {}
+              rp = event['ResourceProperties']
+              AWSAccount = rp['AWSAccount']
+              api_key = rp['api_key']
+              api_secret = rp['api_secret']
+
+              
+              responseData = {}
+              
+              
+              acct = get_keys(AWSAccount, api_key, api_secret)
+              urlID = create_events(acct, api_key, api_secret)
+
+              LOGGER.info(f'Account externalID {urlID}')
+              responseData['urlID'] = urlID
+              
+              print(AWSAccount)
+              print(urlID)
+              print("end")
+              
+              cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData, "urlID")
+
+              
+            def get_keys(AWSAccount, api_key, api_secret):
+                API_URL = "https://api.cloudsploit.com/v2"
+                ssl._create_default_https_context = ssl._create_unverified_context
+                url = f"{API_URL}/keys"
+                timestamp = str(int(time.time() * 1000))
+                method = 'GET'
+                path = '/v2/keys'
+                string = (timestamp + method + path).replace(" ", "")
+                secret_bytes = bytes(f"{api_secret}", 'utf-8')
+                string_bytes = bytes(string, 'utf-8')
+                signature = hmac.new(secret_bytes, msg=string_bytes, digestmod=hashlib.sha256).hexdigest()
+                headers = {
+                'Content-Type': 'application/json',
+                'X-Signature': signature,
+                'X-Timestamp': timestamp,
+                'X-API-Key': f"{api_key}",
+                'Accept': 'application/json',
+                }
+                request = requests.get(url, headers=headers).content
+                response_body = {}
+                response_body = json.loads(request)
+                keys = json.dumps(response_body['data'])
+                keys2 = json.loads(keys)
+                #real_time_events = json.dumps(response_body, indent=4, sort_keys=True)
+                #print(real_time_events)
+                #print (response_body['role_arn'])
+                #print (keys)
+                for j in keys2:
+                        role = j['role_arn'].split(':')
+                        #print(role[4])
+                        if(role[4] == AWSAccount):
+                            #print(j['id'])
+                            accountID = j['id']
+                            return accountID
+
+
+            def create_events(account, api_key, api_secret):
+                ssl._create_default_https_context = ssl._create_unverified_context
+                url = f"{API_URL}/events"
+                timestamp = str(int(time.time() * 1000))
+                method = 'POST'
+                path = '/v2/events'
+                keyid = account
+                payload = json.dumps({"key_id":keyid})
+
+                string = (timestamp + method + path + payload).replace(" ", "")
+                secret_bytes = bytes(f"{api_secret}", 'utf-8')
+                string_bytes = bytes(string, 'utf-8')
+                signature = hmac.new(secret_bytes, msg=string_bytes, digestmod=hashlib.sha256).hexdigest()
+
+                headers = {
+                'Content-Type': 'application/json',
+                'X-Signature': signature,
+                'X-Timestamp': timestamp,
+                'X-API-Key': f"{api_key}",
+                'Accept': 'application/json',
+                }
+
+                request = requests.post(url, data=payload, headers=headers).content
+                response_body = json.loads(request)
+                URL_ID = json.dumps(response_body, indent=4, sort_keys=True)
+                urlID = json.dumps(response_body['data']['url_id'])
+                urlID = urlID.replace('"', '')
+                return urlID
+      Handler: index.lambda_handler
+      MemorySize: 128
+      Role: !GetAtt "LambdaRole.Arn"
+      Runtime: python3.7
+
+      
+            
+  SNSTopic:
+    Type: 'AWS::SNS::Topic'
+    Properties:
+      DisplayName: !Join 
+        - ''
+        - - aqua-cspm-sns-
+          - !Ref 'AWS::AccountId'
+      TopicName: !Join 
+        - ''
+        - - aqua-cspm-sns-
+          - !Ref 'AWS::AccountId'
+      Subscription:
+        - Endpoint: !Join 
+            - ''
+            - - !Ref URLBase
+              - !Ref 'AWS::AccountId'
+              - '?id='
+              - !GetAtt ExternalURLInvoke.urlID
+          Protocol: https
+  SNSTopicPolicy:
+    Type: 'AWS::SNS::TopicPolicy'
+    Properties:
+      PolicyDocument:
+        Version: 2008-10-17
+        Id: aqua-cspm-eventspolicy
+        Statement:
+          - Sid: __default_statement_ID
+            Effect: Allow
+            Principal:
+              AWS: '*'
+            Action:
+              - 'SNS:Publish'
+              - 'SNS:RemovePermission'
+              - 'SNS:SetTopicAttributes'
+              - 'SNS:DeleteTopic'
+              - 'SNS:ListSubscriptionsByTopic'
+              - 'SNS:GetTopicAttributes'
+              - 'SNS:Receive'
+              - 'SNS:AddPermission'
+              - 'SNS:Subscribe'
+            Resource: !Ref SNSTopic
+            Condition:
+              StringEquals:
+                'AWS:SourceOwner': !Ref 'AWS::AccountId'
+          - Sid: __console_pub_0
+            Effect: Allow
+            Principal:
+              AWS: !Join 
+                - ''
+                - - 'arn:aws:iam::'
+                  - !Ref 'AWS::AccountId'
+                  - ':root'
+            Action: 'SNS:Publish'
+            Resource: !Ref SNSTopic
+          - Sid: eventsstatement
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: 'sns:Publish'
+            Resource: !Ref SNSTopic
+      Topics:
+        - !Ref SNSTopic
+  EventRule:
+    Type: 'AWS::Events::Rule'
+    Properties:
+      Description: Send security events to Aqua CSPM
+      EventPattern:
+        source:
+          - aws.acm
+          - aws.config
+          - aws.elasticloadbalancing
+          - aws.iam
+          - aws.kms
+          - aws.logs
+          - aws.rds
+          - aws.route53
+          - aws.s3
+          - aws.ses
+          - aws.signin
+        detail-type:
+          - AWS API Call via CloudTrail
+          - AWS Console Sign In via CloudTrail
+        detail:
+          eventSource:
+            - acm.amazonaws.com
+            - config.amazonaws.com
+            - elasticloadbalancing.amazonaws.com
+            - iam.amazonaws.com
+            - kms.amazonaws.com
+            - logs.amazonaws.com
+            - rds.amazonaws.com
+            - route53.amazonaws.com
+            - s3.amazonaws.com
+            - ses.amazonaws.com
+            - signin.amazonaws.com
+          eventName:
+            - RemoveTags
+            - StartLogging
+            - StopLogging
+            - DeleteConfigRule
+            - DeleteDeliveryChannel
+            - DeleteEvaluationResults
+            - StopConfigurationRecorder
+            - CreateListeners
+            - CreateLoadBalancer
+            - CreateLoadBalancerListeners
+            - CreateRoute
+            - RevokeSecurityGroupEgress
+            - RevokeSecurityGroupIngress
+            - CreateVpnConnection
+            - CreateVpnConnectionRoute
+            - CreateVpnGateway
+            - DeleteNetworkAclEntry
+            - ReplaceNetworkAclEntry
+            - DisableKeyRotation
+            - PutKeyPolicy
+            - DeleteLogGroup
+            - DeleteLogStream
+            - PutRetentionPolicy
+            - DeleteRetentionPolicy
+            - AuthorizeDBSecurityGroupIngress
+            - RevokeDBSecurityGroupIngress
+            - RestoreDBInstanceToPointInTime
+            - RestoreDBInstanceFromDBSnapshot
+            - RestoreDBClusterFromSnapshot
+            - RestoreDBClusterToPointInTime
+            - DeleteDBCluster
+            - DeleteDBInstance
+            - DeleteDBSecurityGroup
+            - CreateHostedZone
+            - DeleteHostedZone
+            - CreateBucket
+            - DeleteBucket
+            - PutBucketAcl
+            - PutBucketPolicy
+            - PutBucketVersioning
+            - DeleteBucketEncryption
+            - SetIdentityDkimEnabled
+            - VerifyDomainDkim
+            - VerifyDomainIdentity
+            - VerifyEmailAddress
+            - VerifyEmailIdentity
+            - ConsoleLogin
+      State: ENABLED
+      Targets:
+        - Arn: !Ref SNSTopic
+          Id: aqua-cspm-sns
+  EventRuleTwo:
+    Type: 'AWS::Events::Rule'
+    Properties:
+      Description: Send security events to Aqua CSPM
+      EventPattern:
+        source:
+          - aws.athena
+          - aws.cloudtrail
+          - aws.ec2
+          - aws.kinesis
+          - aws.sns
+          - aws.sqs
+        detail-type:
+          - AWS API Call via CloudTrail
+          - AWS Console Sign In via CloudTrail
+        detail:
+          eventSource:
+            - athena.amazonaws.com
+            - cloudtrail.amazonaws.com
+            - ec2.amazonaws.com
+            - kinesis.amazonaws.com
+            - sns.amazonaws.com
+            - sqs.amazonaws.com
+          eventName:
+            - CreateTrail
+            - DeleteTrail
+            - UpdateTrail
+            - CreateStream
+            - StopStreamEncryption
+            - SetQueueAttributes
+            - CreateQueue
+            - CreateWorkGroup
+            - UpdateWorkGroup
+            - CreateQueue
+            - SetTopicAttributes
+            - CreateTopic
+            - AllocateAddress
+            - AcceptVpcPeeringConnection
+            - AuthorizeSecurityGroupEgress
+            - AuthorizeSecurityGroupIngress
+            - CreateKeyPair
+            - CreateNetworkAclEntry
+            - CreateSecurityGroup
+            - CreateVpcPeeringConnection
+            - DeleteFlowLogs
+            - DeleteSecurityGroup
+            - ImportKeyPair
+            - ModifySecurityGroupRules
+            - ReleaseAddress
+            - RequestSpotFleet
+            - RequestSpotInstances
+            - RunInstances
+            - RunScheduledInstances
+            - StartInstances
+      State: ENABLED
+      Targets:
+        - Arn: !Ref SNSTopic
+          Id: aqua-cspm-sns
+Outputs:
+  SNSTopicARN:
+    Description: The ARN of the SNS endpoint to give to Aqua CSPM.
+    Value: !Ref SNSTopic
+  StackVersion:
+    Description: The Aqua CSPM stack version.
+    Value: '2.0'
