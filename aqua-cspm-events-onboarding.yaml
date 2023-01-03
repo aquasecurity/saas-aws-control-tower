@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Aqua CSPM security scans CloudWatch Event rules, push to all accounts through AWS organizations
+Description: Aqua CSPM security scans CloudWatch Event rules, push to all accounts through AWS organizations. Must contact support to "the POST endpoint" for this script to work. Also best practice is to generate a unique API key and delete it after this script has been completed, in its current form it leaves the api key and secret unencrypted in the cloudwatch logs.
 Parameters:
   URLBase:
     Type: String

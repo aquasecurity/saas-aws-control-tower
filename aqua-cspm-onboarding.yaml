@@ -324,12 +324,12 @@ Resources:
             - appconfig:ListConfigurationProfiles
             - compute-optimizer:GetEC2InstanceRecommendations
             - compute-optimizer:GetAutoScalingGroupRecommendations
-            - imagebuilder:List*
-            - ses:DescribeActiveReceiptRuleSet
-            - athena:GetWorkGroup
-            - logs:DescribeLogGroups
-            - logs:DescribeMetricFilters
-            - config:getComplianceDetailsByConfigRule
+            - imagebuilder:ListInfrastructureConfigurations
+            - imagebuilder:ListImageRecipes
+            - imagebuilder:ListComponents
+            - imagebuilder:GetInfrastructureConfiguration
+            - imagebuilder:GetImageRecipe
+            - imagebuilder:GetComponent
             - elastictranscoder:ListPipelines
             - elasticfilesystem:DescribeFileSystems
             - servicequotas:ListServiceQuotas
@@ -340,10 +340,6 @@ Resources:
             - devops-guru:ListNotificationChannels
             - ec2:GetEbsEncryptionByDefault
             - ec2:GetEbsDefaultKmsKeyId
-            - ec2:DescribeSubnets
-            - ec2:DescribeVolumes
-            - ec2:describeVpcPeeringConnections
-            - organizations:ListAccounts
             - kendra:ListIndices
             - proton:ListEnvironmentTemplates
             - qldb:ListLedgers
@@ -399,12 +395,10 @@ Resources:
             - profile:GetDomain
             - lex:DescribeBotAlias
             - lookoutvision:DescribeModel
-            - s3:ListBuckets
-            - s3:GetObjectLockConfiguration
-            - s3:GetAccountPublicAccessBlock
+            - s3:ListBucket
+            - s3:GetObjectAttributes
             - sts:GetCallerIdentity
             - frauddetector:GetKMSEncryptionKey
-            - imagebuilder:ListImagePipelines
             - compute-optimizer:GetRecommendationSummaries
             Resource: "*"
       ManagedPolicyArns:
