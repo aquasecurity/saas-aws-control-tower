@@ -361,6 +361,7 @@
                 - databrew:ListJobs
                 - managedblockchain:ListNetworks
                 - connect:ListInstances
+                - backup:GetBackupPlan
                 - backup:ListBackupVaults
                 - backup:DescribeRegionSettings
                 - backup:getBackupVaultNotifications

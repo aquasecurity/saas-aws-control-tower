@@ -365,6 +365,7 @@
                 - backup:DescribeRegionSettings
                 - backup:getBackupVaultNotifications
                 - backup:ListBackupPlans
+                - backup:GetBackupPlan
                 - backup:GetBackupVaultAccessPolicy
                 - dlm:GetLifecyclePolicies
                 - glue:GetSecurityConfigurations
