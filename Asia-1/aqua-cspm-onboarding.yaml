@@ -331,6 +331,7 @@
                 - logs:DescribeLogGroups
                 - logs:DescribeMetricFilters
                 - config:getComplianceDetailsByConfigRule
+                - elasticmapreduce:ListInstanceGroups
                 - elastictranscoder:ListPipelines
                 - elasticfilesystem:DescribeFileSystems
                 - servicequotas:ListServiceQuotas
@@ -353,6 +354,7 @@
                 - memorydb:DescribeClusters
                 - kafka:ListClusters
                 - apprunner:ListServices
+                - apprunner:DescribeService
                 - finspace:ListEnvironments
                 - healthlake:ListFHIRDatastores
                 - codeartifact:ListDomains
@@ -365,6 +367,7 @@
                 - backup:DescribeRegionSettings
                 - backup:getBackupVaultNotifications
                 - backup:ListBackupPlans
+                - backup:GetBackupPlan
                 - backup:GetBackupVaultAccessPolicy
                 - dlm:GetLifecyclePolicies
                 - glue:GetSecurityConfigurations
