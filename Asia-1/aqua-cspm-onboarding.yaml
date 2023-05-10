@@ -342,6 +342,10 @@
                 - devops-guru:ListNotificationChannels
                 - ec2:GetEbsEncryptionByDefault
                 - ec2:GetEbsDefaultKmsKeyId
+                - ec2:DescribeSecurityGroups
+                - ec2:DescribeVpcs
+                - ec2:DescribeInstances
+                - ec2:DescribeVolumes
                 - organizations:ListAccounts
                 - kendra:ListIndices
                 - proton:ListEnvironmentTemplates
@@ -389,7 +393,9 @@
                 - forecast:ListForecastExportJobs
                 - forecast:DescribeDataset
                 - lambda:GetFunctionUrlConfig
+                - lambda:ListFunctions
                 - cloudwatch:GetMetricStatistics
+                - cloudtrail:DescribeTrails
                 - backup:GetBackupVaultAccessPolicy
                 - geo:DescribeTracker
                 - connect:ListInstanceStorageConfigs
@@ -404,6 +410,12 @@
                 - frauddetector:GetKMSEncryptionKey
                 - imagebuilder:ListImagePipelines
                 - compute-optimizer:GetRecommendationSummaries
+                - rds:DescribeDBInstances
+                - elasticloadbalancing:DescribeLoadBalancers
+                - redshift:DescribeClusters
+                - kms:DescribeKey
+                - kms:ListKeys
+                - sts:GetCallerIdentity
                 Resource: "*"
           ManagedPolicyArns:
           - arn:aws:iam::aws:policy/SecurityAudit
