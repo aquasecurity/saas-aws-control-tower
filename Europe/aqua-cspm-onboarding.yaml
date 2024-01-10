@@ -371,7 +371,7 @@ Resources:
             - backup:GetBackupVaultAccessPolicy
             - dlm:GetLifecyclePolicies
             - glue:GetSecurityConfigurations
-            - ssm:describeSessions
+            - ssm:DescribeSessions
             - ssm:GetServiceSetting
             - ecr:DescribeRegistry
             - ecr-public:DescribeRegistries
