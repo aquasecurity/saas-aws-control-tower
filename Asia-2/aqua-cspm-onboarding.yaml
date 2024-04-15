@@ -279,7 +279,7 @@
             Statement:
             - Effect: Allow
               Principal:
-                AWS: arn:aws:iam::057012691312:role/gtnpr-lambda-cloudsploit-api
+                AWS: arn:aws:iam::057012691312:role/gtnpr-cloudsploit-api
               Action: 'sts:AssumeRole'
               Condition:
                 StringEquals:
@@ -288,7 +288,7 @@
                   aws:SourceIp: 52.78.161.45/32
             - Effect: Allow
               Principal:
-                AWS: arn:aws:iam::057012691312:role/gtnpr-lambda-cloudsploit-collector
+                AWS: arn:aws:iam::057012691312:role/gtnpr-cloudsploit-collector
               Action: 'sts:AssumeRole'
               Condition:
                 StringEquals:
@@ -297,7 +297,7 @@
                   aws:SourceIp: 52.78.161.45/32
             - Effect: Allow
               Principal:
-                AWS: arn:aws:iam::057012691312:role/gtnpr-lambda-cloudsploit-remediator
+                AWS: arn:aws:iam::057012691312:role/gtnpr-cloudsploit-remediator
               Action: 'sts:AssumeRole'
               Condition:
                 StringEquals:
@@ -306,7 +306,7 @@
                   aws:SourceIp: 52.78.161.45/32
             - Effect: Allow
               Principal:
-                AWS: arn:aws:iam::057012691312:role/gtnpr-lambda-cloudsploit-tasks
+                AWS: arn:aws:iam::057012691312:role/gtnpr-cloudsploit-tasks
               Action: 'sts:AssumeRole'
               Condition:
                 StringEquals:

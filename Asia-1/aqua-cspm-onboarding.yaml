@@ -279,7 +279,7 @@
             Statement:
             - Effect: Allow
               Principal:
-                AWS: arn:aws:iam::057012691312:role/uwbwh-lambda-cloudsploit-api
+                AWS: arn:aws:iam::057012691312:role/uwbwh-cloudsploit-api
               Action: 'sts:AssumeRole'
               Condition:
                 StringEquals:
@@ -288,7 +288,7 @@
                   aws:SourceIp: 13.215.18.141/32
             - Effect: Allow
               Principal:
-                AWS: arn:aws:iam::057012691312:role/uwbwh-lambda-cloudsploit-collector
+                AWS: arn:aws:iam::057012691312:role/uwbwh-cloudsploit-collector
               Action: 'sts:AssumeRole'
               Condition:
                 StringEquals:
@@ -297,7 +297,7 @@
                   aws:SourceIp: 13.215.18.141/32
             - Effect: Allow
               Principal:
-                AWS: arn:aws:iam::057012691312:role/uwbwh-lambda-cloudsploit-remediator
+                AWS: arn:aws:iam::057012691312:role/uwbwh-cloudsploit-remediator
               Action: 'sts:AssumeRole'
               Condition:
                 StringEquals:
@@ -306,7 +306,7 @@
                   aws:SourceIp: 13.215.18.141/32
             - Effect: Allow
               Principal:
-                AWS: arn:aws:iam::057012691312:role/uwbwh-lambda-cloudsploit-tasks
+                AWS: arn:aws:iam::057012691312:role/uwbwh-cloudsploit-tasks
               Action: 'sts:AssumeRole'
               Condition:
                 StringEquals:
